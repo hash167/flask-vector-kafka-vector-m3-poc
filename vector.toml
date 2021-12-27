@@ -1,0 +1,48 @@
+# Set global options
+data_dir = "/var/lib/vector"
+
+[sources.from_broker]
+  type = "kafka"
+  bootstrap_servers = "kafka:29092"
+  group_id = "vector-consumer"
+  topics = ["events"]
+
+[transforms.json_parser]
+  type   = "json_parser"
+  inputs = ["from_broker"]
+  drop_field = true
+  field = "message"
+
+[transforms.parse_kafka]
+  type = "remap"
+  inputs = ["from_broker"]
+  source = """
+  .metric = parse_json!(.message)
+  .metric.timestamp = to_timestamp!(.metric.timestamp)
+  """
+
+[transforms.to_metric]
+  type = "lua"
+  inputs = [ "parse_kafka" ]
+  version = "2"
+  [transforms.to_metric.hooks]
+    process = """
+    function (event, emit)
+      event.metric = event.log.metric
+      event.log = nil
+      emit(event)
+    end
+    """
+
+
+[sinks.to_indexer]
+  type = "elasticsearch"
+  inputs = ["json_parser"]
+  healthcheck = false
+  endpoint = "http://elasticsearch:9200"
+
+[sinks.to_m3]
+  type = "prometheus_remote_write"
+  inputs = ["to_metric"]
+  endpoint = "http://m3query:7201/api/v1/prom/remote/write"
+  default_namespace = "default"

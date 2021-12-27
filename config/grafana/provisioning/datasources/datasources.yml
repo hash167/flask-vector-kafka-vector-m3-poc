@@ -1,0 +1,9 @@
+apiVersion: 1
+datasources:
+- name: M3Query
+  type: prometheus
+  url: http://m3query:7201
+  access: proxy
+  isDefault: false
+  jsonData:
+    httpMethod: POST
