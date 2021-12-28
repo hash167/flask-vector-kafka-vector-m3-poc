@@ -3,12 +3,22 @@ version: "3.7"
 services:
 
   webapp:
-    build: ./webapp/
+    build: ./webapp_gunicorn/
     container_name: webapp
     ports:
-      - 5001:5001
+      - 5000:5000
     depends_on:
       - provisioner
+  
+  vector_gunicorn:
+    image: timberio/vector:nightly-alpine
+    container_name: vector_sidecar
+    ports:
+      - 8889:8888
+    volumes: 
+      - $PWD/webapp_gunicorn/vector.toml:/etc/vector/vector.toml:ro
+    depends_on:
+      - webapp
 
   zookeeper:
     image: confluentinc/cp-zookeeper:5.4.0

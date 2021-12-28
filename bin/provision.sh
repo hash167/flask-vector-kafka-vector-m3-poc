@@ -172,8 +172,5 @@ ATTEMPTS=100 TIMEOUT=2 retry_with_backoff  \
   '[ "$(curl -sSf ${COORDINATOR_API_HOST}/api/v1/services/m3db/placement | grep -c INITIALIZING)" -eq 0 ]'
 
 echo "Provisioning is done."
-echo "Prometheus available at http://localhost:9090"
-if [[ "$USE_MULTI_PROMETHEUS_NODES" = true ]] ; then
-    echo "Prometheus replica is available at http://localhost:9091"
-fi
+
 echo "Grafana available at http://localhost:3000"

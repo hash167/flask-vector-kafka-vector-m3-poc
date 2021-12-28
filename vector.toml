@@ -34,7 +34,6 @@ data_dir = "/var/lib/vector"
     end
     """
 
-
 [sinks.to_indexer]
   type = "elasticsearch"
   inputs = ["json_parser"]

@@ -2,6 +2,14 @@ version: "3.7"
 
 services:
 
+  webapp:
+    build: ./webapp/
+    container_name: webapp
+    ports:
+      - 5001:5001
+    depends_on:
+      - provisioner
+
   zookeeper:
     image: confluentinc/cp-zookeeper:5.4.0
     hostname: zookeeper
@@ -68,21 +76,6 @@ services:
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
       - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.2
-    container_name: elastic
-    environment:
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
-      - discovery.type=single-node
-      - network.host=_site_, _local_
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    ports:
-      - 9200:9200
-      - 9300:9300
-
   vector:
     image: timberio/vector:nightly-alpine
     container_name: vector
@@ -92,20 +85,89 @@ services:
       - $PWD/vector.toml:/etc/vector/vector.toml:ro
     depends_on:
       - kafka
-      - elasticsearch
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.6.2
-    container_name: kibana
+      - provisioner
+  
+  m3db_seed:
+    image: quay.io/m3db/m3dbnode:latest
+    volumes:
+      - "./config/m3/m3dbnode.yml:/etc/m3dbnode/m3dbnode.yml"
+      - "./config/m3/schema.proto:/etc/m3dbnode/schema.proto"
+    environment:
+      - M3DB_HOST_ID=m3db_seed
+    expose:
+      - "2379"
+      - "9002"
+      - "9003"
+      - "9004"
     ports:
-      - 5601:5601
-    depends_on:
-      - elasticsearch
-
-  webapp:
-    build: ./webapp/
-    container_name: webapp
+      - "0.0.0.0:2379:2379"
+      - "0.0.0.0:9002:9002"
+      - "0.0.0.0:9003:9003"
+      - "0.0.0.0:9004:9004"
+    privileged: true
+    cap_add:
+      - ALL
+  m3coordinator:
+    expose:
+      - "7201"
+      - "7203"
+      - "7204"
+      - "7507"
     ports:
-      - 5001:5001
+      - "0.0.0.0:7201:7201"
+      - "0.0.0.0:7203:7203"
+      - "0.0.0.0:7204:7204"
+      - "0.0.0.0:7507:7507"
+
+    image: quay.io/m3db/m3coordinator:latest
+    volumes:
+      - "./config/m3/m3coordinator.yml:/etc/m3coordinator/m3coordinator.yml"
+      - "./config/m3/schema.proto:/etc/m3coordinator/schema.proto"
     depends_on:
-      - elasticsearch
+      - "m3db_seed"
+  m3query:
+    expose:
+      - "7201"
+      - "7203"
+      - "7204"
+      - "7507"
+    ports:
+      - "0.0.0.0:7221:7201"
+      - "0.0.0.0:7223:7203"
+      - "0.0.0.0:7224:7204"
+      - "0.0.0.0:7527:7507"
+
+    image: quay.io/m3db/m3query:latest
+    volumes:
+      - "./config/m3/m3query.yml:/etc/m3query/m3query.yml"
+    depends_on:
+      - "provisioner"
+
+  provisioner:
+    environment:
+      - USE_MULTI_DB_NODES=false
+      - USE_MULTI_PROMETHEUS_NODES=false
+
+    image: dwdraju/alpine-curl-jq:latest
+    depends_on:
+      - "m3db_seed"
+    volumes:
+      - "./bin/provision.sh:/tmp/provision.sh"
+    entrypoint: /tmp/provision.sh
+
+  grafana:
+    expose:
+      - "3000"
+    ports:
+      - "0.0.0.0:3000:3000"
+
+    image: grafana/grafana:latest
+    volumes:
+      - "./config/grafana/provisioning/:/etc/grafana/provisioning/"
+      - "./config/grafana/dashboards/:/var/lib/grafana/dashboards/"
+    environment:
+      - GF_LOG_LEVEL=error
+    depends_on:
+      - "provisioner"
+
+

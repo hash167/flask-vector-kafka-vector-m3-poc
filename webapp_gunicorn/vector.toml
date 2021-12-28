@@ -1,0 +1,16 @@
+# Set global options
+data_dir = "/var/lib/vector"
+
+[sources.prometheus]
+  type = "prometheus_scrape"
+  endpoints = [ "http://webapp:5000/metrics" ]
+  scrape_interval_secs = 15
+  instance_tag = "instance"
+  endpoint_tag = "flask_app"
+
+[sinks.to_broker]
+  type = "kafka"
+  inputs = ["prometheus"]
+  bootstrap_servers = "kafka:29092"
+  topic = "events"
+  encoding = "json"
