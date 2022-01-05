@@ -38,12 +38,12 @@ At the start, Grafana will be configured with M3Query:
 | Container   | Endpoints 	| Notes		|
 | ----------- | ----------- |-----------|
 | webapp| [http://localhost:5000](http://localhost:9090)|Gunicorn Flask webapp|
-| vector_sidecar| [localhost:8889](http://localhost:9090)|Gunicorn Flask webapp|
-| kafka| [localhost:8889](http://localhost:9090)|Gunicorn Flask webapp|
-| zookeeper| [localhost:8889](http://localhost:9090)|Gunicorn Flask webapp|
-| kafka_topics_ui| [localhost:8889](http://localhost:9090)|Gunicorn Flask webapp|
-| kafka_ui| [localhost:8080](http://localhost:9090)|Gunicorn Flask webapp|
-| vector| [localhost:8888](http://localhost:9090)|Gunicorn Flask webapp|
+| vector_sidecar| [localhost:8889](http://localhost:8889)|Vector side-car container|
+| kafka| [localhost:9092](http://localhost:9092)|Kafka message broker|
+| zookeeper| [localhost:2181](localhost:2181)|Gunicorn Flask webapp|
+| kafka_topics_ui| [localhost:8889](localhost:18000)|Gunicorn Flask webapp|
+| kafka_ui| [localhost:8080](http://localhost:8080)|Gunicorn Flask webapp|
+| vector| [localhost:8888](localhost:8888)|Gunicorn Flask webapp|
 | grafana| [http://localhost:3000](http://localhost:3000)|Grafana instance w/ multiple datasources configured|
 | m3db_seed	  | localhost:2379; localhost:909[0-2]| M3DB instance, running built-in etcd service (2379 TCP port). |
 | m3coordinator| 0.0.0.0:7201 | Exposes Prometheus Remote Read and Write API on TCP 7201 port |
@@ -51,7 +51,6 @@ At the start, Grafana will be configured with M3Query:
 | fluentbit | 0.0.0.0:2021  | FluentBit agent w/ both Prometheus exporter and Prometheus remote write outputs enabled|
 | provisioner | N/A | Prepares M3DB node on startup (creates M3DB namespace and initialises placement) |
 
-## Instructions for the workshop
 
 ### Step 1: Go to the M3 Workshop Fluentcon repo and clone the repo onto your local machine: 
 
@@ -62,19 +61,6 @@ Link to repo: https://github.com/fluent/m3-workshop-fluentcon
 Run the following command:
 
 ```$:~ docker-compose up```
-
-Once you see the following output (with code 0 at the end), the stack is configured and ready to be used: 
-
-```
-provisioner_1      | Waiting until shards are marked as available
-provisioner_1      | Provisioning is done.
-provisioner_1      | Prometheus available at http://localhost:9090
-provisioner_1      | Prometheus replica is available at http://localhost:9091
-provisioner_1      | Grafana available at http://localhost:3000
-m3-workshop_provisioner_1 exited with code 0
-```
-
-Logs of the `provisioner` process can be seen either by following the output of the `docker-compose up` or by running the following command: ```docker-compose logs provisioner```
 
 ### Step 3: Open up Grafana 
 
@@ -87,7 +73,6 @@ Grafana: http://localhost:3000
 ### Step 4: Explore the Prometheus data sources in Grafana
 
 In the [Explore](http://localhost:3000/explore) tab of Grafana, you will see three datasources - default, Prometheus, and M3Query. 
-Prometheus instance is scraping itself and the `node_exporter` metrics of `fluentbit` container being exported via one of the FluentBit outputs. FluentBit `node_exporter` metrics also end up 
 in the M3DB node via Prometheus remote write API. You can use `up{}` PromQL query in the Grafana to inspect which datasources return the results.
 
 ### Step 5 - Spinning down the stack
